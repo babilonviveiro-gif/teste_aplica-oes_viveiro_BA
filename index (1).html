@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viveiro — Dashboard de Aplicações</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
+  --blue: #378ADD; --blue-light: #E6F1FB; --blue-dark: #185FA5;
+  --amber: #EF9F27; --amber-light: #FAEEDA; --amber-dark: #854F0B;
+  --red: #E24B4A; --red-light: #FCEBEB;
+  --bg: #F7F6F1; --surface: #FFFFFF; --surface2: #F0EEE8;
+  --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+  --text: #1A1A17; --text2: #6B6B60; --text3: #9B9B8E;
+  --radius: 10px; --radius-lg: 16px;
+  --mono: 'DM Mono', monospace; --sans: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* LAYOUT */
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--text); color: #fff; padding: 28px 20px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+.logo { font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+.logo-sub { font-size: 11px; color: rgba(255,255,255,0.35); font-family: var(--mono); margin-bottom: 32px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.55); margin-bottom: 2px; transition: all .15s; }
+.nav-item:hover { color: #fff; background: rgba(255,255,255,0.07); }
+.nav-item.active { color: #fff; background: rgba(255,255,255,0.12); }
+.nav-icon { width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0; }
+.nav-item.active .nav-icon { opacity: 1; }
+.sidebar-footer { margin-top: auto; font-size: 11px; color: rgba(255,255,255,0.2); font-family: var(--mono); }
+.main { padding: 32px 36px; overflow-y: auto; }
+.page { display: none; } .page.active { display: block; }
+.page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; font-family: var(--mono); }
+
+/* UPLOAD */
+.upload-wrap { display: flex; align-items: center; justify-content: center; min-height: 70vh; }
+.upload-card { background: var(--surface); border: 1.5px dashed var(--border2); border-radius: var(--radius-lg); padding: 56px 48px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; max-width: 440px; width: 100%; }
+.upload-card:hover { border-color: var(--green); background: var(--green-light); }
+.upload-card input { display: none; }
+.upload-icon-wrap { width: 56px; height: 56px; background: var(--green-light); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+.upload-title { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.upload-hint { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.upload-hint b { color: var(--green-dark); font-weight: 500; }
+.error-msg { background: var(--red-light); border: 1px solid var(--red); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #7A1F1F; margin-top: 16px; }
+
+/* CARDS */
+.cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+.metric-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+.metric-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; font-family: var(--mono); }
+.metric-value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.metric-sub { font-size: 12px; color: var(--text2); }
+.metric-card.accent { background: var(--text); }
+.metric-card.accent .metric-label { color: rgba(255,255,255,0.4); }
+.metric-card.accent .metric-value { color: #fff; }
+.metric-card.accent .metric-sub { color: rgba(255,255,255,0.5); }
+
+/* SECTION */
+.section-hd { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; font-family: var(--mono); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+
+/* PRÓXIMAS APLICAÇÕES */
+.app-list { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.app-item { display: flex; align-items: flex-start; gap: 14px; padding: 13px 16px; border-bottom: 0.5px solid var(--border); }
+.app-item:last-child { border-bottom: none; }
+.app-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.app-dot.fertirr { background: var(--green); }
+.app-dot.pulv { background: var(--blue); }
+.app-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.app-meta { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+.app-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; margin-left: auto; flex-shrink: 0; }
+.badge-today { background: var(--green-light); color: var(--green-dark); }
+.badge-soon { background: var(--amber-light); color: var(--amber-dark); }
+.badge-week { background: var(--blue-light); color: var(--blue-dark); }
+
+/* SETOR CARDS */
+.setor-grid { display: flex; flex-direction: column; gap: 10px; }
+.setor-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.setor-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.setor-name { font-size: 14px; font-weight: 600; }
+.setor-mudas { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 2px; }
+.status-pill { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+.pill-green { background: var(--green-light); color: var(--green-dark); }
+.pill-blue { background: var(--blue-light); color: var(--blue-dark); }
+.pill-amber { background: var(--amber-light); color: var(--amber-dark); }
+.pill-gray { background: var(--surface2); color: var(--text2); }
+.progress-wrap { margin-bottom: 8px; }
+.progress-track { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+.progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 4px; }
+.setor-footer { font-size: 12px; color: var(--text2); padding-top: 8px; border-top: 0.5px solid var(--border); }
+
+/* CALENDÁRIO */
+.cal-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.cal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 0.5px solid var(--border); }
+.cal-title { font-size: 16px; font-weight: 600; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-btn { width: 32px; height: 32px; border: 0.5px solid var(--border2); border-radius: 8px; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text); transition: background .15s; }
+.cal-btn:hover { background: var(--surface2); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-day-hd { font-size: 11px; font-weight: 600; color: var(--text3); text-align: center; padding: 10px 4px; border-bottom: 0.5px solid var(--border); font-family: var(--mono); letter-spacing: 0.05em; }
+.cal-cell { min-height: 80px; padding: 8px; border-right: 0.5px solid var(--border); border-bottom: 0.5px solid var(--border); cursor: pointer; transition: background .1s; position: relative; }
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell:hover { background: var(--surface2); }
+.cal-cell.other-month { background: var(--bg); opacity: .5; pointer-events: none; }
+.cal-cell.today .cal-date { background: var(--text); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.cal-cell.selected { background: var(--blue-light); }
+.cal-date { font-size: 12px; font-weight: 600; margin-bottom: 4px; font-family: var(--mono); }
+.cal-dots { display: flex; flex-wrap: wrap; gap: 3px; }
+.cal-dot { width: 6px; height: 6px; border-radius: 50%; }
+.cal-count { font-size: 10px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+
+/* DETAIL PANEL */
+.detail-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+.detail-date { font-size: 13px; font-weight: 600; font-family: var(--mono); margin-bottom: 14px; color: var(--text2); }
+.detail-event { border-left: 3px solid; padding: 10px 12px; margin-bottom: 8px; border-radius: 0 8px 8px 0; }
+.detail-event.fertirr { border-color: var(--green); background: var(--green-light); }
+.detail-event.pulv { border-color: var(--blue); background: var(--blue-light); }
+.detail-event-type { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--mono); margin-bottom: 3px; }
+.detail-event.fertirr .detail-event-type { color: var(--green-dark); }
+.detail-event.pulv .detail-event-type { color: var(--blue-dark); }
+.detail-event-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.detail-event-setores { font-size: 12px; color: var(--text2); }
+.legend { display: flex; gap: 20px; padding: 14px 22px; border-top: 0.5px solid var(--border); }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+
+/* CALENDAR LAYOUT */
+.cal-layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+
+.empty { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { height: auto; position: static; flex-direction: row; flex-wrap: wrap; padding: 16px; gap: 4px; }
+  .logo-sub, .sidebar-footer { display: none; }
+  .logo { margin-bottom: 0; margin-right: 16px; }
+  .cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .row2, .cal-layout { grid-template-columns: 1fr; }
+  .main { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo">Viveiro</div>
+    <div class="logo-sub">gestão de aplicações</div>
+    <nav>
+      <div class="nav-item active" onclick="goPage('upload')" id="nav-upload">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Carregar planilha
+      </div>
+      <div class="nav-item" onclick="goPage('overview')" id="nav-overview">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Visão geral
+      </div>
+      <div class="nav-item" onclick="goPage('setores')" id="nav-setores">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Setores
+      </div>
+      <div class="nav-item" onclick="goPage('calendario')" id="nav-calendario">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendário
+      </div>
+    </nav>
+    <div class="sidebar-footer">viveiro v2 • 2025</div>
+  </aside>
+
+  <main class="main">
+    <!-- UPLOAD -->
+    <div class="page active" id="page-upload">
+      <div class="upload-wrap">
+        <div>
+          <div class="upload-card" onclick="document.getElementById('file-input').click()">
+            <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(event)">
+            <div class="upload-icon-wrap">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="upload-title">Carregar planilha do viveiro</div>
+            <div class="upload-hint">Selecione o arquivo <b>gestao_viveiro_v2.xlsx</b><br>com os setores preenchidos na aba SETORES</div>
+          </div>
+          <div id="error-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="page" id="page-overview">
+      <div class="page-title">Visão geral</div>
+      <div class="page-sub" id="overview-date"></div>
+      <div class="cards-grid" id="summary-cards"></div>
+      <div class="row2">
+        <div>
+          <div class="section-hd">Próximas aplicações — 7 dias</div>
+          <div class="app-list" id="proximas-list"></div>
+        </div>
+        <div>
+          <div class="section-hd">Aplicações hoje</div>
+          <div class="app-list" id="hoje-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETORES -->
+    <div class="page" id="page-setores">
+      <div class="page-title">Setores</div>
+      <div class="page-sub">Progresso e estágio atual de cada setor</div>
+      <div class="setor-grid" id="setor-grid"></div>
+    </div>
+
+    <!-- CALENDÁRIO -->
+    <div class="page" id="page-calendario">
+      <div class="page-title">Calendário de aplicações</div>
+      <div class="page-sub">Clique em um dia para ver as aplicações agendadas</div>
+      <div class="cal-layout">
+        <div>
+          <div class="cal-wrap">
+            <div class="cal-header">
+              <div class="cal-title" id="cal-month-label"></div>
+              <div class="cal-nav">
+                <button class="cal-btn" onclick="changeMonth(-1)">&#8592;</button>
+                <button class="cal-btn" onclick="changeMonth(1)">&#8594;</button>
+              </div>
+            </div>
+            <div class="cal-grid" id="cal-head"></div>
+            <div class="cal-grid" id="cal-body"></div>
+            <div class="legend">
+              <div class="legend-item"><div class="cal-dot" style="background:var(--green)"></div>Fertirrigação</div>
+              <div class="legend-item"><div class="cal-dot" style="background:var(--blue)"></div>Pulverização</div>
+            </div>
+          </div>
+        </div>
+        <div id="day-detail-wrap"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+let appData = null;
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let selectedDay = null;
+
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DAYS_PT_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const DAYS_PT_FULL = ['DOMINGO','SEGUNDA-FEIRA','TERÇA-FEIRA','QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA','SÁBADO'];
+
+const FERTIRR_THRESHOLDS = [0,2,10,20];
+const b2=28; for(let s=0;s<4;s++) for(let d of [0,2,4]) FERTIRR_THRESHOLDS.push(b2+s*7+d);
+const b3=56; for(let s=0;s<4;s++) for(let d of [0,2,4]) FERTIRR_THRESHOLDS.push(b3+s*7+d);
+const b4=84; for(let s=0;s<4;s++) for(let d of [0,2,4]) FERTIRR_THRESHOLDS.push(b4+s*7+d);
+
+const FERTIRR_LABELS = [
+  'Fertirrigação pós clonagem — químico',
+  'Fertirrigação 2 dias pós clonagem — biológico',
+  'Fertirrigação 10 dias pós clonagem — biológico',
+  'Fertirrigação 20 dias pós clonagem — biológico',
+];
+const MES_LABELS = ['MÊS 2','MÊS 2','MÊS 2','MÊS 2','MÊS 3','MÊS 3','MÊS 3','MÊS 3','MÊS 4','MÊS 4','MÊS 4','MÊS 4'];
+const SEM_LABELS = ['SEMANA 1','SEMANA 2','SEMANA 3','SEMANA 4'];
+const DIA_LABELS = ['SEGUNDA-FEIRA','QUARTA-FEIRA','SEXTA-FEIRA'];
+for(let mi=0;mi<12;mi++) for(let d of DIA_LABELS) FERTIRR_LABELS.push(`${MES_LABELS[mi]} | ${SEM_LABELS[mi%4]} — ${d}`);
+
+const BLOCOS = ['SEMANA 1 DO CICLO (BLOCO 1)','SEMANA 2 DO CICLO (BLOCO 2)','SEMANA 3 DO CICLO (BLOCO 3)'];
+const PULV_NAMES = ['PULVERIZAÇÃO 1','PULVERIZAÇÃO 2','PULVERIZAÇÃO 3'];
+const PULV_LABELS = [];
+for(let b of BLOCOS) for(let p of PULV_NAMES) PULV_LABELS.push(`${b} | ${p}`);
+const PULV_OFFSETS = [0,2,4,7,9,11,14,16,18];
+
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='calendario') renderCalendar();
+}
+
+function addDays(date, n) {
+  const d = new Date(date); d.setDate(d.getDate()+n); return d;
+}
+function daysBetween(d1, d2) {
+  return Math.floor((d2-d1)/(1000*60*60*24));
+}
+function dateKey(d) {
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+function fmtDate(d) {
+  return d.getDate().toString().padStart(2,'0')+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getFullYear();
+}
+
+function handleFile(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'array', cellDates:true});
+      const data = parseWorkbook(wb);
+      if(!data || !data.setores.length) {
+        showError('Nenhum setor encontrado. Verifique se o arquivo é o gestao_viveiro_v2.xlsx com a aba SETORES preenchida.');
+        return;
+      }
+      appData = data;
+      goPage('overview');
+      renderOverview();
+      renderSetores();
+    } catch(err) {
+      showError('Erro ao ler o arquivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showError(msg) {
+  document.getElementById('error-box').innerHTML = `<div class="error-msg">${msg}</div>`;
+}
+
+function parseWorkbook(wb) {
+  const sheetName = wb.SheetNames.find(s => /SETORES/i.test(s));
+  if(!sheetName) throw new Error('Aba SETORES não encontrada');
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true});
+  const setores = [];
+  for(let i=3; i<rows.length; i++) {
+    const r = rows[i];
+    const nome = r[0]; if(!nome || !String(nome).trim()) continue;
+    const mudas = parseFloat(String(r[1]||'').replace(/\./g,'').replace(',','.'));
+    if(isNaN(mudas) || mudas<=0) continue;
+    let dataInicio = null;
+    const dv = r[2];
+    if(dv) {
+      if(typeof dv === 'number') {
+        const d = new Date((dv - 25569)*86400000);
+        dataInicio = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      } else if(dv instanceof Date) {
+        dataInicio = new Date(dv.getFullYear(), dv.getMonth(), dv.getDate());
+      } else if(typeof dv === 'string') {
+        const p = dv.split('/');
+        if(p.length===3) dataInicio = new Date(+p[2], +p[1]-1, +p[0]);
+      }
+    }
+    setores.push({nome: String(nome).trim(), mudas, dataInicio, obs: r[7]||''});
+  }
+  return {setores};
+}
+
+function getAllEvents(setor) {
+  if(!setor.dataInicio) return [];
+  const evs = [];
+  for(let i=0; i<FERTIRR_THRESHOLDS.length; i++) {
+    evs.push({date: addDays(setor.dataInicio, FERTIRR_THRESHOLDS[i]), label: FERTIRR_LABELS[i], type:'fertirr', setor: setor.nome});
+  }
+  for(let cycle=0; cycle<7; cycle++) {
+    const cs = 28 + cycle*21;
+    for(let ei=0; ei<9; ei++) {
+      evs.push({date: addDays(setor.dataInicio, cs+PULV_OFFSETS[ei]), label: PULV_LABELS[ei], type:'pulv', setor: setor.nome, cycle: cycle+1});
+    }
+  }
+  return evs;
+}
+
+function buildEventMap() {
+  const map = {};
+  if(!appData) return map;
+  for(const s of appData.setores) {
+    for(const ev of getAllEvents(s)) {
+      const k = dateKey(ev.date);
+      if(!map[k]) map[k] = [];
+      map[k].push(ev);
+    }
+  }
+  return map;
+}
+
+function getFertirrStep(days) {
+  if(days<0) return -1;
+  if(days>=FERTIRR_THRESHOLDS[FERTIRR_THRESHOLDS.length-1]) return 40;
+  let step=0;
+  for(let i=0; i<FERTIRR_THRESHOLDS.length; i++) { if(days>=FERTIRR_THRESHOLDS[i]) step=i; }
+  return step;
+}
+
+function getProgress(days) {
+  return Math.min(100, Math.round(Math.max(0,days) / 112 * 100));
+}
+
+function renderOverview() {
+  if(!appData) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const {setores} = appData;
+
+  document.getElementById('overview-date').textContent =
+    today.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  const ativos = setores.filter(s => s.dataInicio && daysBetween(s.dataInicio,today)>=0 && daysBetween(s.dataInicio,today)<120);
+  const totalMudas = setores.reduce((a,s)=>a+s.mudas,0);
+
+  const allEvs = [];
+  for(const s of setores) for(const ev of getAllEvents(s)) allEvs.push(ev);
+
+  const hoje = allEvs.filter(e => daysBetween(today,e.date)===0);
+  const next7 = allEvs.filter(e => { const d=daysBetween(today,e.date); return d>0&&d<=7; });
+  next7.sort((a,b)=>a.date-b.date);
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="metric-card accent">
+      <div class="metric-label">Setores ativos</div>
+      <div class="metric-value">${ativos.length}</div>
+      <div class="metric-sub">de ${setores.length} cadastrados</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total de mudas</div>
+      <div class="metric-value">${(totalMudas/1000).toFixed(0)}k</div>
+      <div class="metric-sub">em todos os setores</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Aplicações hoje</div>
+      <div class="metric-value" style="color:var(--green)">${hoje.length}</div>
+      <div class="metric-sub">fertirr + pulv</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Próximos 7 dias</div>
+      <div class="metric-value">${next7.length}</div>
+      <div class="metric-sub">aplicações agendadas</div>
+    </div>
+  `;
+
+  const proxEl = document.getElementById('proximas-list');
+  const grouped = {};
+  for(const ev of next7) {
+    const k = dateKey(ev.date);
+    if(!grouped[k]) grouped[k] = [];
+    grouped[k].push(ev);
+  }
+  proxEl.innerHTML = Object.keys(grouped).length ? Object.entries(grouped).map(([k,evs]) => {
+    const d = evs[0].date;
+    const diff = daysBetween(today, d);
+    const badgeClass = diff===1?'badge-soon':'badge-week';
+    const badgeLabel = diff===1?'Amanhã':`+${diff}d`;
+    return evs.map((ev,i) => `
+      <div class="app-item">
+        <div class="app-dot ${ev.type}"></div>
+        <div style="flex:1">
+          <div class="app-name">${ev.label.length>45?ev.label.slice(0,45)+'…':ev.label}</div>
+          <div class="app-meta">${fmtDate(d)} • ${ev.setor}</div>
+        </div>
+        ${i===0?`<div class="app-badge ${badgeClass}">${badgeLabel}</div>`:''}
+      </div>`).join('');
+  }).join('') : '<div class="empty">Nenhuma aplicação nos próximos 7 dias</div>';
+
+  const hojeEl = document.getElementById('hoje-list');
+  hojeEl.innerHTML = hoje.length ? hoje.map(ev => `
+    <div class="app-item">
+      <div class="app-dot ${ev.type}"></div>
+      <div style="flex:1">
+        <div class="app-name">${ev.label.length>38?ev.label.slice(0,38)+'…':ev.label}</div>
+        <div class="app-meta">${ev.setor}</div>
+      </div>
+      <div class="app-badge badge-today">Hoje</div>
+    </div>`).join('') : '<div class="empty">Nenhuma aplicação hoje</div>';
+}
+
+function renderSetores() {
+  if(!appData) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const el = document.getElementById('setor-grid');
+  el.innerHTML = appData.setores.map(s => {
+    const days = s.dataInicio ? daysBetween(s.dataInicio, today) : null;
+    const pct = days !== null ? getProgress(days) : 0;
+    const step = days !== null ? getFertirrStep(days) : -1;
+    const status = days===null?'Sem data':days<0?'Não iniciado':pct>=100?'Concluído':'Em andamento';
+    const pillCls = status==='Concluído'?'pill-green':status==='Em andamento'?'pill-blue':status==='Sem data'?'pill-gray':'pill-amber';
+    const fertLabel = step>=0&&step<40 ? FERTIRR_LABELS[step] : step>=40 ? 'Ciclo concluído' : '—';
+
+    let nextInfo = '';
+    if(s.dataInicio && days!==null && days>=0) {
+      for(let i=0; i<FERTIRR_THRESHOLDS.length; i++) {
+        if(FERTIRR_THRESHOLDS[i]>days) {
+          const dLeft = FERTIRR_THRESHOLDS[i]-days;
+          nextInfo = `Próxima: ${FERTIRR_LABELS[i].slice(0,40)}… em ${dLeft}d`;
+          break;
+        }
+      }
+    }
+
+    const progressColor = pct>=100?'var(--green)':pct>50?'var(--blue)':'var(--amber)';
+    return `<div class="setor-card">
+      <div class="setor-top">
+        <div>
+          <div class="setor-name">${s.nome}</div>
+          <div class="setor-mudas">${s.mudas.toLocaleString('pt-BR')} mudas ${s.dataInicio?'• Início: '+fmtDate(s.dataInicio):''}</div>
+        </div>
+        <div class="status-pill ${pillCls}">${status}</div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${progressColor}"></div></div>
+        <div class="progress-labels"><span>${pct}% concluído</span><span>${days!==null&&days>=0?days+' dias no ciclo':''}</span></div>
+      </div>
+      <div class="setor-footer">
+        Estágio: <strong>${fertLabel}</strong>${nextInfo?'<br>'+nextInfo:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCalendar() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  document.getElementById('cal-month-label').textContent = `${MONTHS_PT[calMonth]} ${calYear}`;
+
+  const hdEl = document.getElementById('cal-head');
+  hdEl.innerHTML = DAYS_PT_SHORT.map(d=>`<div class="cal-day-hd">${d}</div>`).join('');
+
+  const evMap = buildEventMap();
+  const firstDay = new Date(calYear,calMonth,1);
+  const lastDay = new Date(calYear,calMonth+1,0);
+  const startDow = firstDay.getDay();
+
+  const cells = [];
+  for(let i=0;i<startDow;i++) cells.push({day:null,other:true});
+  for(let d=1;d<=lastDay.getDate();d++) cells.push({day:d,other:false});
+  while(cells.length%7!==0) cells.push({day:null,other:true});
+
+  const bodyEl = document.getElementById('cal-body');
+  bodyEl.innerHTML = cells.map(cell => {
+    if(!cell.day) return `<div class="cal-cell other-month"></div>`;
+    const k = calYear+'-'+(calMonth+1)+'-'+cell.day;
+    const evs = evMap[k]||[];
+    const isToday = today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===cell.day;
+    const isSel = selectedDay===k;
+    const nFertirr = evs.filter(e=>e.type==='fertirr').length;
+    const nPulv = evs.filter(e=>e.type==='pulv').length;
+    const dots = [
+      ...Array(Math.min(nFertirr,4)).fill(`<div class="cal-dot" style="background:var(--green)"></div>`),
+      ...Array(Math.min(nPulv,4)).fill(`<div class="cal-dot" style="background:var(--blue)"></div>`)
+    ].join('');
+    return `<div class="cal-cell${isToday?' today':''}${isSel?' selected':''}${evs.length?' has-events':''}" onclick="selectDay('${k}',${cell.day})">
+      <div class="cal-date">${cell.day}</div>
+      <div class="cal-dots">${dots}</div>
+      ${evs.length?`<div class="cal-count">${evs.length} aplic.</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function selectDay(key, day) {
+  selectedDay = key;
+  renderCalendar();
+  const evMap = buildEventMap();
+  const evs = evMap[key]||[];
+  const wrap = document.getElementById('day-detail-wrap');
+  if(!evs.length) { wrap.innerHTML=''; return; }
+
+  const fertByLabel={}, pulvByLabel={};
+  for(const ev of evs) {
+    if(ev.type==='fertirr') { if(!fertByLabel[ev.label]) fertByLabel[ev.label]=[]; fertByLabel[ev.label].push(ev.setor); }
+    else { const lbl=`Ciclo ${ev.cycle} — ${ev.label}`; if(!pulvByLabel[lbl]) pulvByLabel[lbl]=[]; pulvByLabel[lbl].push(ev.setor); }
+  }
+
+  const [y,m,d] = key.split('-');
+  const dateObj = new Date(+y,+m-1,+d);
+  const diaSemana = DAYS_PT_FULL[dateObj.getDay()];
+
+  wrap.innerHTML = `<div class="detail-wrap">
+    <div class="detail-date">${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y} — ${diaSemana}</div>
+    ${Object.entries(fertByLabel).map(([lbl,setores])=>`
+      <div class="detail-event fertirr">
+        <div class="detail-event-type">Fertirrigação</div>
+        <div class="detail-event-name">${lbl}</div>
+        <div class="detail-event-setores">Setores: ${setores.join(', ')}</div>
+      </div>`).join('')}
+    ${Object.entries(pulvByLabel).map(([lbl,setores])=>`
+      <div class="detail-event pulv">
+        <div class="detail-event-type">Pulverização</div>
+        <div class="detail-event-name">${lbl}</div>
+        <div class="detail-event-setores">Setores: ${setores.join(', ')}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  selectedDay=null;
+  document.getElementById('day-detail-wrap').innerHTML='';
+  renderCalendar();
+}
+</script>
+</body>
+</html>
